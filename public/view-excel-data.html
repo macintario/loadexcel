@@ -13,6 +13,7 @@
                 <h2>Datos de Excel</h2>
                 <div class="header-actions">
                     <button id="refreshBtn" class="refresh-btn">🔄 Actualizar</button>
+                    <button id="downloadCsvBtn" class="refresh-btn" style="display: none;">⬇ Descargar CSV</button>
                     <a href="/excelmoodle/upload-excel" class="back-btn">+ Subir Nuevo</a>
                     <a href="/excelmoodle/dashboard" class="back-btn">← Dashboard</a>
                 </div>
@@ -45,6 +46,9 @@
                 </div>
                 
                 <div class="search-section">
+                    <select id="ownerFilter" style="display: none;">
+                        <option value="">Todos los usuarios</option>
+                    </select>
                     <input type="text" id="searchInput" placeholder="Buscar por boleta, nombre, apellidos o grupo...">
                 </div>
                 
@@ -52,6 +56,7 @@
                     <table id="dataTable" class="results-table">
                         <thead>
                             <tr>
+                                <th id="ownerHeader" style="display: none;">Usuario</th>
                                 <th>Boleta</th>
                                 <th>Nombre</th>
                                 <th>Apellido Paterno</th>
@@ -81,22 +86,72 @@
         let allData = [];
         let filteredData = [];
         let currentPage = 1;
+        let isAdmin = false;
+        let selectedUserId = '';
         const recordsPerPage = 50;
         
         // Cargar datos al iniciar la página
-        document.addEventListener('DOMContentLoaded', loadData);
+        document.addEventListener('DOMContentLoaded', initializePage);
         
         // Event listeners
         document.getElementById('refreshBtn').addEventListener('click', loadData);
         document.getElementById('searchInput').addEventListener('input', filterData);
         document.getElementById('prevPage').addEventListener('click', () => changePage(-1));
         document.getElementById('nextPage').addEventListener('click', () => changePage(1));
+        document.getElementById('downloadCsvBtn').addEventListener('click', downloadCsv);
+        document.getElementById('ownerFilter').addEventListener('change', handleOwnerFilterChange);
+
+        async function initializePage() {
+            await loadCurrentUser();
+            if (isAdmin) {
+                await loadAdminUsers();
+            }
+            await loadData();
+        }
+
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/excelmoodle/api/user');
+                const result = await response.json();
+
+                if (result.success && result.user && result.user.isAdmin) {
+                    isAdmin = true;
+                    document.getElementById('downloadCsvBtn').style.display = 'inline-block';
+                    document.getElementById('ownerHeader').style.display = 'table-cell';
+                    document.getElementById('ownerFilter').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error obteniendo usuario actual:', error);
+            }
+        }
+
+        async function loadAdminUsers() {
+            try {
+                const response = await fetch('/excelmoodle/api/admin/users');
+                const result = await response.json();
+
+                if (!result.success) return;
+
+                const ownerFilter = document.getElementById('ownerFilter');
+                ownerFilter.innerHTML = '<option value="">Todos los usuarios</option>';
+
+                result.users.forEach((user) => {
+                    const option = document.createElement('option');
+                    option.value = String(user.id);
+                    option.textContent = user.username;
+                    ownerFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error cargando usuarios:', error);
+            }
+        }
         
         async function loadData() {
             showLoading();
             
             try {
-                const response = await fetch('/excelmoodle/api/excel-data');
+                const query = isAdmin && selectedUserId ? `?userId=${encodeURIComponent(selectedUserId)}` : '';
+                const response = await fetch(`/excelmoodle/api/excel-data${query}`);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -117,6 +172,12 @@
                 console.error('Error:', error);
                 showError('Error de conexión al servidor');
             }
+        }
+
+        function handleOwnerFilterChange(event) {
+            selectedUserId = event.target.value;
+            currentPage = 1;
+            loadData();
         }
         
         function showLoading() {
@@ -168,7 +229,8 @@
                     item.nombre.toLowerCase().includes(searchTerm) ||
                     item.apellido_paterno.toLowerCase().includes(searchTerm) ||
                     item.apellido_materno.toLowerCase().includes(searchTerm) ||
-                    item.grupo.toLowerCase().includes(searchTerm)
+                    item.grupo.toLowerCase().includes(searchTerm) ||
+                    (item.owner_username && item.owner_username.toLowerCase().includes(searchTerm))
                 );
             }
             
@@ -187,6 +249,7 @@
             pageData.forEach(item => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
+                    ${isAdmin ? `<td>${item.owner_username || 'N/A'}</td>` : ''}
                     <td>${item.boleta}</td>
                     <td>${item.nombre}</td>
                     <td>${item.apellido_paterno}</td>
@@ -222,6 +285,11 @@
                 currentPage = newPage;
                 displayPage(currentPage);
             }
+        }
+
+        function downloadCsv() {
+            const query = selectedUserId ? `?userId=${encodeURIComponent(selectedUserId)}` : '';
+            window.location.href = `/excelmoodle/api/excel-data/download-csv${query}`;
         }
     </script>
 </body>

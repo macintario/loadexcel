@@ -73,6 +73,32 @@ db.connect((err) => {
             console.error('Error creando tabla usuarios: ', err);
         } else {
             console.log('Tabla de usuarios creada o ya existe');
+
+            const desUsername = 'DES';
+            const desEmail = 'des@excelmoodle.local';
+            const desPassword = 'DES1234';
+            const desHashedPassword = bcrypt.hashSync(desPassword, 10);
+
+            const createDesUserQuery = `
+                INSERT INTO users (username, email, password)
+                SELECT ?, ?, ?
+                FROM DUAL
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM users WHERE username = ?
+                )
+            `;
+
+            db.query(
+                createDesUserQuery,
+                [desUsername, desEmail, desHashedPassword, desUsername],
+                (desErr, desResult) => {
+                    if (desErr) {
+                        console.error('Error creando usuario DES: ', desErr);
+                    } else if (desResult.affectedRows > 0) {
+                        console.log('Usuario DES creado. Contraseña temporal: DES1234');
+                    }
+                }
+            );
         }
     });
     
@@ -107,6 +133,14 @@ function requireAuth(req, res, next) {
     } else {
         res.redirect(`${BASE_PATH}/login`);
     }
+}
+
+function requireDesAdmin(req, res, next) {
+    if (req.session.userId && req.session.isAdmin) {
+        return next();
+    }
+
+    return res.status(403).json({ success: false, message: 'Acceso denegado' });
 }
 
 // Rutas
@@ -204,6 +238,7 @@ app.post(`${BASE_PATH}/login`, (req, res) => {
         // Crear sesión
         req.session.userId = user.id;
         req.session.username = user.username;
+        req.session.isAdmin = user.username === 'DES';
         
         res.json({ success: true, message: 'Login exitoso' });
     });
@@ -232,7 +267,13 @@ app.get(`${BASE_PATH}/api/user`, requireAuth, (req, res) => {
             return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
         }
         
-        res.json({ success: true, user: results[0] });
+        res.json({
+            success: true,
+            user: {
+                ...results[0],
+                isAdmin: req.session.isAdmin === true
+            }
+        });
     });
 });
 
@@ -429,20 +470,160 @@ app.post(`${BASE_PATH}/api/upload-excel`, requireAuth, upload.single('excelFile'
 
 // Ruta para obtener los datos de Excel del usuario actual
 app.get(`${BASE_PATH}/api/excel-data`, requireAuth, (req, res) => {
-    const query = `
-        SELECT id, boleta, nombre, apellido_paterno, apellido_materno, grupo, created_at 
-        FROM excel_data 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC 
-    `;
-    
-    db.query(query, [req.session.userId], (err, results) => {
+    const isAdmin = req.session.isAdmin === true;
+    const selectedUserId = Number.parseInt(req.query.userId, 10);
+    const hasSelectedUser = Number.isInteger(selectedUserId) && selectedUserId > 0;
+
+    const query = isAdmin && hasSelectedUser
+        ? `
+            SELECT e.id, e.boleta, e.nombre, e.apellido_paterno,
+             e.apellido_materno, e.grupo, e.created_at, u.username AS owner_username
+            FROM excel_data e
+            INNER JOIN users u ON u.id = e.user_id
+            WHERE e.user_id = ?
+            ORDER BY e.created_at DESC
+        `
+        : isAdmin
+        ? `
+            SELECT e.id, e.boleta, e.nombre, e.apellido_paterno,
+             e.apellido_materno, e.grupo, e.created_at, u.username AS owner_username
+            FROM excel_data e
+            INNER JOIN users u ON u.id = e.user_id
+            ORDER BY e.created_at DESC
+        `
+        : `
+            SELECT e.id, e.boleta, e.nombre, e.apellido_paterno,
+             e.apellido_materno, e.grupo, e.created_at
+            FROM excel_data e
+            WHERE e.user_id = ?
+            ORDER BY e.created_at DESC
+        `;
+
+    const params = isAdmin
+        ? (hasSelectedUser ? [selectedUserId] : [])
+        : [req.session.userId];
+
+    db.query(query, params, (err, results) => {
         if (err) {
             console.error(err);
             return res.status(500).json({ success: false, message: 'Error del servidor' });
         }
         
         res.json({ success: true, data: results });
+    });
+});
+
+app.get(`${BASE_PATH}/api/admin/users`, requireAuth, requireDesAdmin, (req, res) => {
+    const query = `
+        SELECT id, username
+        FROM users
+        WHERE username <> 'DES'
+        ORDER BY username ASC
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ success: false, message: 'Error del servidor' });
+        }
+
+        return res.json({ success: true, users: results });
+    });
+});
+
+app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin, (req, res) => {
+    const selectedUserId = Number.parseInt(req.query.userId, 10);
+    const hasSelectedUser = Number.isInteger(selectedUserId) && selectedUserId > 0;
+
+    const query = hasSelectedUser
+        ? `
+            SELECT
+             concat(
+            'c', right(u.username,2)
+            ,'nms',lpad(rownum(),3,'0'))
+              as username,
+             concat(
+               upper(SUBSTR(apellido_paterno,1,1)),
+               lower(SUBSTR(apellido_paterno,2,1)),
+               upper(SUBSTR(nombre,1,1)),
+               "_",
+               right(boleta,4),
+               "$$"
+               )password,
+             e.nombre as firstname, 
+             concat( e.apellido_paterno, ' ',
+             e.apellido_materno ) as lastname,
+             concat(
+            'c', right(u.username,2)
+            ,'nms',lpad(rownum(),3,'0'),'ipn26@gmail.com') as email,
+               'NMS26' as course1,
+               0 as suspended
+             , 'NMS01' as "group1"
+            FROM excel_data e
+            INNER JOIN users u ON u.id = e.user_id
+            WHERE e.user_id = ?
+`
+        : `
+            SELECT 
+           concat(
+            'c', right(u.username,2)
+            ,'nms',lpad(rownum(),3,'0'))
+              as username,
+             concat(
+               upper(SUBSTR(apellido_paterno,1,1)),
+               lower(SUBSTR(apellido_paterno,2,1)),
+               upper(SUBSTR(nombre,1,1)),
+               "_",
+               right(boleta,4),
+               "$$"
+               )password,
+             e.nombre as firstname, 
+             concat( e.apellido_paterno, ' ',
+             e.apellido_materno ) as lastname,
+             concat(
+            'c', right(u.username,2)
+            ,'nms',lpad(rownum(),3,'0'),'ipn26@gmail.com') as email,
+               'NMS26' as course1,
+               0 as suspended
+             , 'NMS01' as "group1"
+            FROM excel_data e
+            INNER JOIN users u ON u.id = e.user_id
+        `;
+
+    const params = hasSelectedUser ? [selectedUserId] : [];
+
+    db.query(query, params, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ success: false, message: 'Error del servidor' });
+        }
+
+        const escapeCsv = (value) => {
+            const safeValue = String(value ?? '');
+            return `"${safeValue.replace(/"/g, '""')}"`;
+        };
+
+        const lines = [
+            'username,password,firstname,lastname,email,course1,suspended,group1'
+        ];
+
+        for (const row of results) {
+            lines.push([
+                escapeCsv(row.username),
+                escapeCsv(row.password),
+                escapeCsv(row.firstname),
+                escapeCsv(row.lastname),
+                escapeCsv(row.email),
+                escapeCsv(row.course1),
+                escapeCsv(row.suspended),
+                escapeCsv(row.group1),
+            ].join(','));
+        }
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        const filename = hasSelectedUser ? `excel_data_user_${selectedUserId}.csv` : 'excel_data_global.csv';
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        return res.status(200).send(`\uFEFF${lines.join('\n')}`);
     });
 });
 
