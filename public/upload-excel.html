@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Excel - Sistema de Usuarios</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="upload-form">
+            <div class="header">
+                <h2>Subir Archivo Excel</h2>
+                <a href="/dashboard" class="back-btn">← Volver al Dashboard</a>
+            </div>
+            
+            <div class="instructions">
+                <h3>Instrucciones:</h3>
+                <p>Sube un archivo Excel (.xlsx o .xls) que contenga las siguientes columnas:</p>
+                <ul>
+                    <li><strong>Boleta</strong> - Número o código de boleta (puede contener números y letras)</li>
+                    <li><strong>Nombre</strong> - Nombre(s) del estudiante</li>
+                    <li><strong>Apellido Paterno</strong> - Apellido paterno del estudiante</li>
+                    <li><strong>Apellido Materno</strong> - Apellido materno del estudiante</li>
+                    <li><strong>Grupo</strong> - Grupo o clase asignada</li>
+                </ul>
+                <p><strong>Nota:</strong> La primera fila debe contener los encabezados de las columnas.</p>
+                <p><strong>Importante:</strong> Cada que se cargue un archivo, los datos existentes se sobrescribirán.</p>
+            </div>
+            
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="excelFile">Seleccionar archivo Excel:</label>
+                    <input type="file" id="excelFile" name="excelFile" accept=".xlsx,.xls" required>
+                    <small>Formatos permitidos: .xlsx, .xls</small>
+                </div>
+                
+                <button type="submit" id="submitBtn">
+                    <span id="btnText">Subir y Procesar</span>
+                    <span id="spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+            
+            <div id="message" class="message"></div>
+            <div id="results" class="results" style="display: none;">
+                <h3>Resultados del procesamiento:</h3>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const fileInput = document.getElementById('excelFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showMessage('Por favor selecciona un archivo', 'error');
+                return;
+            }
+            
+            formData.append('excelFile', file);
+            
+            // Mostrar spinner
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('spinner');
+            
+            submitBtn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+            
+            try {
+                const response = await fetch('/api/upload-excel', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    showResults(result.data);
+                    
+                    // Limpiar el formulario
+                    fileInput.value = '';
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión al servidor', 'error');
+            } finally {
+                // Ocultar spinner
+                submitBtn.disabled = false;
+                btnText.style.display = 'inline-block';
+                spinner.style.display = 'none';
+            }
+        });
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+        }
+        
+        function showResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            if (data && data.length > 0) {
+                resultsContent.innerHTML = `
+                    <p><strong>Registros procesados:</strong> ${data.length}</p>
+                    <div class="table-container">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Boleta</th>
+                                    <th>Nombre</th>
+                                    <th>Apellido Paterno</th>
+                                    <th>Apellido Materno</th>
+                                    <th>Grupo</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map(row => `
+                                    <tr>
+                                        <td>${row.boleta || 'N/A'}</td>
+                                        <td>${row.nombre || 'N/A'}</td>
+                                        <td>${row.apellidoPaterno || 'N/A'}</td>
+                                        <td>${row.apellidoMaterno || 'N/A'}</td>
+                                        <td>${row.grupo || 'N/A'}</td>
+                                        <td class="${row.status === 'success' ? 'success' : 'error'}">
+                                            ${row.status === 'success' ? 'Guardado' : 'Error'}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                resultsDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

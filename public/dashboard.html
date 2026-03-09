@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistema de Usuarios</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <div class="header">
+                <h2>Bienvenido al la carga de usuarios para Moodle</h2>
+                <button id="logoutBtn" class="logout-btn">Cerrar Sesión</button>
+            </div>
+            
+            <div class="user-info">
+                <h3>Usuario:</h3>
+                <div id="userDetails">
+                    <p><strong>Cargando...</strong></p>
+                </div>
+            </div>
+            
+            <div class="dashboard-content">
+                <h3>Panel de Control</h3>
+                <p>Esta página le permite gestionar los datos de usuarios para Moodle.</p>
+                
+                <div class="features">
+                    <div class="feature-card">
+                        <h4>Subir Excel</h4>
+                        <p>Sube archivos Excel con datos de boletas, nombres y grupo.</p>
+                        <a href="/upload-excel" class="feature-link">Ir a Subir Excel</a>
+                    </div>
+                                        
+                    <div class="feature-card">
+                        <h4>Ver Datos Excel</h4>
+                        <p>Consulta y administra los datos de Excel que has subido al sistema.</p>
+                        <a href="/view-excel-data" class="feature-link">Ver Datos</a>
+                    </div>                    
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cargar información del usuario
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/api/user');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const user = result.user;
+                    document.getElementById('userDetails').innerHTML = `
+                        ${user.username}<br>
+                    `;
+                } else {
+                    document.getElementById('userDetails').innerHTML = `
+                        <p class="error">Error cargando información del usuario</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('userDetails').innerHTML = `
+                    <p class="error">Error de conexión</p>
+                `;
+            }
+        }
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = '/login';
+                } else {
+                    alert('Error cerrando sesión');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error de conexión');
+            }
+        });
+        
+        // Cargar información del usuario al cargar la página
+        document.addEventListener('DOMContentLoaded', loadUserInfo);
+    </script>
+</body>
+</html>

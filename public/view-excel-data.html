@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos Excel - Sistema de Usuarios</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="data-view">
+            <div class="header">
+                <h2>Datos de Excel</h2>
+                <div class="header-actions">
+                    <button id="refreshBtn" class="refresh-btn">🔄 Actualizar</button>
+                    <a href="/upload-excel" class="back-btn">+ Subir Nuevo</a>
+                    <a href="/dashboard" class="back-btn">← Dashboard</a>
+                </div>
+            </div>
+            
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Cargando datos...</p>
+            </div>
+            
+            <div id="noData" class="no-data" style="display: none;">
+                <h3>No hay datos disponibles</h3>
+                <p>No has subido ningún archivo Excel todavía.</p>
+                <a href="/upload-excel" class="feature-link">Subir primer archivo</a>
+            </div>
+            
+            <div id="dataContainer" class="data-container" style="display: none;">
+                <div class="data-summary">
+                    <h3>Resumen</h3>
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <h4 id="totalRecords">0</h4>
+                            <p>Total de registros</p>
+                        </div>
+                        <div class="summary-card">
+                            <h4 id="lastUpload">-</h4>
+                            <p>Última subida</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="search-section">
+                    <input type="text" id="searchInput" placeholder="Buscar por boleta, nombre, apellidos o grupo...">
+                </div>
+                
+                <div class="table-container">
+                    <table id="dataTable" class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Boleta</th>
+                                <th>Nombre</th>
+                                <th>Apellido Paterno</th>
+                                <th>Apellido Materno</th>
+                                <th>Grupo</th>
+                                <th>Fecha de Subida</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <!-- Los datos se cargarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination" id="pagination" style="display: none;">
+                    <button id="prevPage" class="page-btn">← Anterior</button>
+                    <span id="pageInfo">Página 1 de 1</span>
+                    <button id="nextPage" class="page-btn">Siguiente →</button>
+                </div>
+            </div>
+            
+            <div id="error" class="message error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const recordsPerPage = 50;
+        
+        // Cargar datos al iniciar la página
+        document.addEventListener('DOMContentLoaded', loadData);
+        
+        // Event listeners
+        document.getElementById('refreshBtn').addEventListener('click', loadData);
+        document.getElementById('searchInput').addEventListener('input', filterData);
+        document.getElementById('prevPage').addEventListener('click', () => changePage(-1));
+        document.getElementById('nextPage').addEventListener('click', () => changePage(1));
+        
+        async function loadData() {
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/excel-data');
+                const result = await response.json();
+                
+                if (result.success) {
+                    allData = result.data;
+                    filteredData = [...allData];
+                    
+                    if (allData.length === 0) {
+                        showNoData();
+                    } else {
+                        showData();
+                        updateSummary();
+                        displayPage(1);
+                    }
+                } else {
+                    showError(result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error de conexión al servidor');
+            }
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('noData').style.display = 'none';
+            document.getElementById('dataContainer').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function showNoData() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('noData').style.display = 'block';
+            document.getElementById('dataContainer').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function showData() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('noData').style.display = 'none';
+            document.getElementById('dataContainer').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('noData').style.display = 'none';
+            document.getElementById('dataContainer').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent = message;
+        }
+        
+        function updateSummary() {
+            document.getElementById('totalRecords').textContent = allData.length;
+            
+            if (allData.length > 0) {
+                const latestDate = new Date(Math.max(...allData.map(item => new Date(item.created_at))));
+                document.getElementById('lastUpload').textContent = latestDate.toLocaleDateString('es-ES');
+            }
+        }
+        
+        function filterData() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (searchTerm === '') {
+                filteredData = [...allData];
+            } else {
+                filteredData = allData.filter(item => 
+                    item.boleta.toLowerCase().includes(searchTerm) ||
+                    item.nombre.toLowerCase().includes(searchTerm) ||
+                    item.apellido_paterno.toLowerCase().includes(searchTerm) ||
+                    item.apellido_materno.toLowerCase().includes(searchTerm) ||
+                    item.grupo.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            currentPage = 1;
+            displayPage(1);
+        }
+        
+        function displayPage(page) {
+            const startIndex = (page - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const pageData = filteredData.slice(startIndex, endIndex);
+            
+            const tableBody = document.getElementById('dataTableBody');
+            tableBody.innerHTML = '';
+            
+            pageData.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.boleta}</td>
+                    <td>${item.nombre}</td>
+                    <td>${item.apellido_paterno}</td>
+                    <td>${item.apellido_materno}</td>
+                    <td>${item.grupo}</td>
+                    <td>${new Date(item.created_at).toLocaleDateString('es-ES')} ${new Date(item.created_at).toLocaleTimeString('es-ES')}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            updatePagination();
+        }
+        
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            
+            if (totalPages <= 1) {
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('pagination').style.display = 'flex';
+            document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+        }
+        
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredData.length / recordsPerPage);
+            const newPage = currentPage + direction;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                displayPage(currentPage);
+            }
+        }
+    </script>
+</body>
+</html>
