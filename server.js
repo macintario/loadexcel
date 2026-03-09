@@ -540,7 +540,7 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
             SELECT
              concat(
             'c', right(u.username,2)
-            ,'nms',lpad(rownum(),3,'0'))
+            ,'nms',lpad(@rn := @rn+1 ,3,'0'))
               as username,
              concat(
                upper(SUBSTR(apellido_paterno,1,1)),
@@ -555,19 +555,20 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
              e.apellido_materno ) as lastname,
              concat(
             'c', right(u.username,2)
-            ,'nms',lpad(rownum(),3,'0'),'ipn26@gmail.com') as email,
+            ,'nms',lpad(@rn,3,'0'),'@gmail.com') as email,
                'NMS26' as course1,
                0 as suspended
              , 'NMS01' as "group1"
             FROM excel_data e
             INNER JOIN users u ON u.id = e.user_id
+            CROSS JOIN (SELECT @rn := 0) params
             WHERE e.user_id = ?
 `
         : `
             SELECT 
            concat(
             'c', right(u.username,2)
-            ,'nms',lpad(rownum(),3,'0'))
+            ,'nms',lpad(@rn := @rn+1 ,3,'0'))
               as username,
              concat(
                upper(SUBSTR(apellido_paterno,1,1)),
@@ -582,12 +583,13 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
              e.apellido_materno ) as lastname,
              concat(
             'c', right(u.username,2)
-            ,'nms',lpad(rownum(),3,'0'),'ipn26@gmail.com') as email,
+            ,'nms',lpad(@rn,3,'0'),'@gmail.com') as email,
                'NMS26' as course1,
                0 as suspended
              , 'NMS01' as "group1"
             FROM excel_data e
             INNER JOIN users u ON u.id = e.user_id
+            CROSS JOIN (SELECT @rn := 0) params
         `;
 
     const params = hasSelectedUser ? [selectedUserId] : [];
