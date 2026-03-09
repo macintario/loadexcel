@@ -38,7 +38,7 @@
             <div id="message" class="message"></div>
             
             <p class="register-link">
-                ¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a>
+                ¿Ya tienes cuenta? <a href="/excelmoodle/login">Inicia sesión aquí</a>
             </p>
         </div>
     </div>
@@ -61,7 +61,7 @@
             delete data.confirmPassword;
             
             try {
-                const response = await fetch('/register', {
+                const response = await fetch('/excelmoodle/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -81,7 +81,7 @@
                     
                     // Redirigir al login después de 2 segundos
                     setTimeout(() => {
-                        window.location.href = '/login';
+                        window.location.href = '/excelmoodle/login';
                     }, 2000);
                 } else {
                     messageDiv.className = 'message error';

@@ -13,8 +13,8 @@
                 <h2>Datos de Excel</h2>
                 <div class="header-actions">
                     <button id="refreshBtn" class="refresh-btn">🔄 Actualizar</button>
-                    <a href="/upload-excel" class="back-btn">+ Subir Nuevo</a>
-                    <a href="/dashboard" class="back-btn">← Dashboard</a>
+                    <a href="/excelmoodle/upload-excel" class="back-btn">+ Subir Nuevo</a>
+                    <a href="/excelmoodle/dashboard" class="back-btn">← Dashboard</a>
                 </div>
             </div>
             
@@ -26,7 +26,7 @@
             <div id="noData" class="no-data" style="display: none;">
                 <h3>No hay datos disponibles</h3>
                 <p>No has subido ningún archivo Excel todavía.</p>
-                <a href="/upload-excel" class="feature-link">Subir primer archivo</a>
+                <a href="/excelmoodle/upload-excel" class="feature-link">Subir primer archivo</a>
             </div>
             
             <div id="dataContainer" class="data-container" style="display: none;">
@@ -96,7 +96,7 @@
             showLoading();
             
             try {
-                const response = await fetch('/api/excel-data');
+                const response = await fetch('/excelmoodle/api/excel-data');
                 const result = await response.json();
                 
                 if (result.success) {

@@ -9,11 +9,12 @@ const XLSX = require('xlsx');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const BASE_PATH = '/excelmoodle';
 
 // Configuración de middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(BASE_PATH, express.static('public'));
 
 // Configuración de Multer para subida de archivos
 const storage = multer.memoryStorage();
@@ -104,41 +105,45 @@ function requireAuth(req, res, next) {
     if (req.session.userId) {
         next();
     } else {
-        res.redirect('/login');
+        res.redirect(`${BASE_PATH}/login`);
     }
 }
 
 // Rutas
 app.get('/', (req, res) => {
+    res.redirect(BASE_PATH);
+});
+
+app.get(BASE_PATH, (req, res) => {
     if (req.session.userId) {
-        res.redirect('/dashboard');
+        res.redirect(`${BASE_PATH}/dashboard`);
     } else {
-        res.redirect('/login');
+        res.redirect(`${BASE_PATH}/login`);
     }
 });
 
-app.get('/login', (req, res) => {
+app.get(`${BASE_PATH}/login`, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.get('/register', (req, res) => {
+app.get(`${BASE_PATH}/register`, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
-app.get('/dashboard', requireAuth, (req, res) => {
+app.get(`${BASE_PATH}/dashboard`, requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-app.get('/upload-excel', requireAuth, (req, res) => {
+app.get(`${BASE_PATH}/upload-excel`, requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'upload-excel.html'));
 });
 
-app.get('/view-excel-data', requireAuth, (req, res) => {
+app.get(`${BASE_PATH}/view-excel-data`, requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'view-excel-data.html'));
 });
 
 // Ruta para registro de usuarios
-app.post('/register', async (req, res) => {
+app.post(`${BASE_PATH}/register`, async (req, res) => {
     const { username, email, password } = req.body;
     
     try {
@@ -175,7 +180,7 @@ app.post('/register', async (req, res) => {
 });
 
 // Ruta para login
-app.post('/login', (req, res) => {
+app.post(`${BASE_PATH}/login`, (req, res) => {
     const { username, password } = req.body;
     
     const query = 'SELECT * FROM users WHERE username = ?';
@@ -205,7 +210,7 @@ app.post('/login', (req, res) => {
 });
 
 // Ruta para logout
-app.post('/logout', (req, res) => {
+app.post(`${BASE_PATH}/logout`, (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({ success: false, message: 'Error cerrando sesión' });
@@ -215,7 +220,7 @@ app.post('/logout', (req, res) => {
 });
 
 // Ruta para obtener información del usuario actual
-app.get('/api/user', requireAuth, (req, res) => {
+app.get(`${BASE_PATH}/api/user`, requireAuth, (req, res) => {
     const query = 'SELECT id, username, email, created_at FROM users WHERE id = ?';
     db.query(query, [req.session.userId], (err, results) => {
         if (err) {
@@ -232,7 +237,7 @@ app.get('/api/user', requireAuth, (req, res) => {
 });
 
 // Ruta para procesar archivo Excel
-app.post('/api/upload-excel', requireAuth, upload.single('excelFile'), (req, res) => {
+app.post(`${BASE_PATH}/api/upload-excel`, requireAuth, upload.single('excelFile'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ success: false, message: 'No se subió ningún archivo' });
     }
@@ -412,7 +417,7 @@ app.post('/api/upload-excel', requireAuth, upload.single('excelFile'), (req, res
 });
 
 // Ruta para obtener los datos de Excel del usuario actual
-app.get('/api/excel-data', requireAuth, (req, res) => {
+app.get(`${BASE_PATH}/api/excel-data`, requireAuth, (req, res) => {
     const query = `
         SELECT id, boleta, nombre, apellido_paterno, apellido_materno, grupo, created_at 
         FROM excel_data 

@@ -11,7 +11,7 @@
         <div class="upload-form">
             <div class="header">
                 <h2>Subir Archivo Excel</h2>
-                <a href="/dashboard" class="back-btn">← Volver al Dashboard</a>
+                <a href="/excelmoodle/dashboard" class="back-btn">← Volver al Dashboard</a>
             </div>
             
             <div class="instructions">
@@ -74,7 +74,7 @@
             spinner.style.display = 'inline-block';
             
             try {
-                const response = await fetch('/api/upload-excel', {
+                const response = await fetch('/excelmoodle/api/upload-excel', {
                     method: 'POST',
                     body: formData
                 });

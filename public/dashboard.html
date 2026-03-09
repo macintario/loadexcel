@@ -29,13 +29,13 @@
                     <div class="feature-card">
                         <h4>Subir Excel</h4>
                         <p>Sube archivos Excel con datos de boletas, nombres y grupo.</p>
-                        <a href="/upload-excel" class="feature-link">Ir a Subir Excel</a>
+                        <a href="/excelmoodle/upload-excel" class="feature-link">Ir a Subir Excel</a>
                     </div>
                                         
                     <div class="feature-card">
                         <h4>Ver Datos Excel</h4>
                         <p>Consulta y administra los datos de Excel que has subido al sistema.</p>
-                        <a href="/view-excel-data" class="feature-link">Ver Datos</a>
+                        <a href="/excelmoodle/view-excel-data" class="feature-link">Ver Datos</a>
                     </div>                    
                     
                 </div>
@@ -47,7 +47,7 @@
         // Cargar información del usuario
         async function loadUserInfo() {
             try {
-                const response = await fetch('/api/user');
+                const response = await fetch('/excelmoodle/api/user');
                 const result = await response.json();
                 
                 if (result.success) {
@@ -71,7 +71,7 @@
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             try {
-                const response = await fetch('/logout', {
+                const response = await fetch('/excelmoodle/logout', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -81,7 +81,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = '/login';
+                    window.location.href = '/excelmoodle/login';
                 } else {
                     alert('Error cerrando sesión');
                 }
