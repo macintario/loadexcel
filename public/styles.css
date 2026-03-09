@@ -7,7 +7,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5A1236 0%, #8B1538 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -59,14 +59,14 @@ body {
 
 .form-group input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #5A1236;
+    box-shadow: 0 0 0 3px rgba(90, 18, 54, 0.1);
 }
 
 button[type="submit"] {
     width: 100%;
     padding: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5A1236 0%, #8B1538 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -78,7 +78,7 @@ button[type="submit"] {
 
 button[type="submit"]:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 5px 15px rgba(90, 18, 54, 0.4);
 }
 
 .message {
@@ -108,7 +108,7 @@ button[type="submit"]:hover {
 }
 
 .register-link a {
-    color: #667eea;
+    color: #5A1236;
     text-decoration: none;
     font-weight: 500;
 }
@@ -221,7 +221,7 @@ button[type="submit"]:hover {
 .feature-link {
     display: inline-block;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5A1236 0%, #8B1538 100%);
     color: white;
     text-decoration: none;
     border-radius: 5px;
@@ -292,7 +292,7 @@ button[type="submit"]:hover {
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 30px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid #5A1236;
 }
 
 .instructions h3 {
@@ -327,7 +327,7 @@ button[type="submit"]:hover {
 }
 
 .form-group input[type="file"]:hover {
-    border-color: #667eea;
+    border-color: #5A1236;
 }
 
 .form-group small {
@@ -386,7 +386,7 @@ button[type="submit"]:hover {
 }
 
 .results-table th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #5A1236 0%, #8B1538 100%);
     color: white;
     font-weight: 500;
 }
@@ -513,7 +513,7 @@ button[type="submit"]:hover {
 }
 
 .summary-card h4 {
-    color: #667eea;
+    color: #5A1236;
     font-size: 24px;
     margin-bottom: 5px;
 }
@@ -539,8 +539,8 @@ button[type="submit"]:hover {
 
 .search-section input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #5A1236;
+    box-shadow: 0 0 0 3px rgba(90, 18, 54, 0.1);
 }
 
 .pagination {
@@ -554,7 +554,7 @@ button[type="submit"]:hover {
 
 .page-btn {
     padding: 8px 16px;
-    background: #667eea;
+    background: #5A1236;
     color: white;
     border: none;
     border-radius: 5px;
@@ -564,7 +564,7 @@ button[type="submit"]:hover {
 }
 
 .page-btn:hover:not(:disabled) {
-    background: #5a67d8;
+    background: #7a1540;
 }
 
 .page-btn:disabled {

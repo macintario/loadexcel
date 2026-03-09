@@ -300,6 +300,17 @@ app.post(`${BASE_PATH}/api/upload-excel`, requireAuth, upload.single('excelFile'
             const results = [];
             let processedCount = 0;
             let errorCount = 0;
+
+            // Normalizar texto: quitar tildes y convertir ñ/Ñ a n/N
+            const normalizeText = (value) => {
+                return String(value || '')
+                    .trim()
+                    .replace(/\s+/g, ' ')
+                    .replace(/ñ/g, 'n')
+                    .replace(/Ñ/g, 'N')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+            };
         
         // Función para procesar una fila
         const processRow = (row, callback) => {
@@ -311,9 +322,9 @@ app.post(`${BASE_PATH}/api/upload-excel`, requireAuth, upload.single('excelFile'
                 boleta = String(boleta).trim().replace(/\s+/g, ' '); // Normalizar espacios múltiples
             }
             
-            const nombre = String(row[nombreColumn] || '').trim();
-            const apellidoPaterno = String(row[apellidoPaternoColumn] || '').trim();
-            const apellidoMaterno = String(row[apellidoMaternoColumn] || '').trim();
+            const nombre = normalizeText(row[nombreColumn]);
+            const apellidoPaterno = normalizeText(row[apellidoPaternoColumn]);
+            const apellidoMaterno = normalizeText(row[apellidoMaternoColumn]);
             const grupo = String(row[grupoColumn] || '').trim();
             
             // Validar que los campos no estén vacíos
