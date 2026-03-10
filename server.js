@@ -176,6 +176,10 @@ app.get(`${BASE_PATH}/view-excel-data`, requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'view-excel-data.html'));
 });
 
+app.get(`${BASE_PATH}/change-passwords`, requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'change-passwords.html'));
+});
+
 // Ruta para registro de usuarios
 app.post(`${BASE_PATH}/register`, async (req, res) => {
     const { username, email, password } = req.body;
@@ -538,6 +542,7 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
     const query = hasSelectedUser
         ? `
             SELECT
+            u.username escuela, 
              concat(
             'c', right(u.username,2)
             ,'nms',lpad(@rn := @rn+1 ,3,'0'))
@@ -563,9 +568,12 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
             INNER JOIN users u ON u.id = e.user_id
             CROSS JOIN (SELECT @rn := 0) params
             WHERE e.user_id = ?
-`
+           ORDER BY u.created_at ASC
+            
+`           
         : `
-            SELECT 
+            SELECT
+            u.username escuela, 
            concat(
             'c', right(u.username,2)
             ,'nms',lpad(@rn := @rn+1 ,3,'0'))
@@ -590,6 +598,7 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
             FROM excel_data e
             INNER JOIN users u ON u.id = e.user_id
             CROSS JOIN (SELECT @rn := 0) params
+            ORDER BY u.created_at ASC
         `;
 
     const params = hasSelectedUser ? [selectedUserId] : [];
@@ -608,7 +617,8 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
         const lines = [
             'username,password,firstname,lastname,email,course1,suspended,group1'
         ];
-
+        let counter = 0;
+        let nombreEscuela = "todas"
         for (const row of results) {
             lines.push([
                 escapeCsv(row.username),
@@ -620,13 +630,165 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
                 escapeCsv(row.suspended),
                 escapeCsv(row.group1),
             ].join(','));
+            if(counter == 0) {
+                nombreEscuela = row.escuela;
+            }
+            counter++;
         }
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        const filename = hasSelectedUser ? `excel_data_user_${selectedUserId}.csv` : 'excel_data_global.csv';
+        const filename = hasSelectedUser ? `usuarios_moodle_${nombreEscuela}.csv` : 'usuarios_moodle_global.csv';
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         return res.status(200).send(`\uFEFF${lines.join('\n')}`);
     });
+});
+
+// Ruta para cambiar contraseña propia
+app.post(`${BASE_PATH}/api/change-own-password`, requireAuth, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.session.userId;
+
+    // Validar que se proporcionen los datos
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Contraseña actual y nueva contraseña son requeridas' 
+        });
+    }
+
+    // Validar longitud mínima
+    if (newPassword.length < 6) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'La nueva contraseña debe tener al menos 6 caracteres' 
+        });
+    }
+
+    try {
+        // Obtener usuario actual
+        const query = 'SELECT * FROM users WHERE id = ?';
+        db.query(query, [userId], async (err, results) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ success: false, message: 'Error del servidor' });
+            }
+
+            if (results.length === 0) {
+                return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+            }
+
+            const user = results[0];
+
+            // Verificar contraseña actual
+            const isValid = await bcrypt.compare(currentPassword, user.password);
+            if (!isValid) {
+                return res.status(401).json({ success: false, message: 'Contraseña actual incorrecta' });
+            }
+
+            // Hasher nueva contraseña
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Actualizar contraseña
+            const updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
+            db.query(updateQuery, [hashedPassword, userId], (updateErr, updateResult) => {
+                if (updateErr) {
+                    console.error(updateErr);
+                    return res.status(500).json({ success: false, message: 'Error al actualizar la contraseña' });
+                }
+
+                res.json({ 
+                    success: true, 
+                    message: 'Contraseña cambiada exitosamente' 
+                });
+            });
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Error del servidor' });
+    }
+});
+
+// Ruta para cambiar contraseña de otro usuario (solo para DES)
+app.post(`${BASE_PATH}/api/change-user-password`, requireAuth, requireDesAdmin, async (req, res) => {
+    const { userId, newPassword } = req.body;
+
+    // Validar que se proporcionen los datos
+    if (!userId || !newPassword) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'ID de usuario y nueva contraseña son requeridos' 
+        });
+    }
+
+    // Validar que userId sea un número válido
+    const parsedUserId = Number.parseInt(userId, 10);
+    if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'ID de usuario inválido' 
+        });
+    }
+
+    // Validar longitud mínima
+    if (newPassword.length < 6) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'La nueva contraseña debe tener al menos 6 caracteres' 
+        });
+    }
+
+    // No permitir cambiar contraseña del mismo DES
+    if (parsedUserId === req.session.userId) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Para cambiar tu propia contraseña, usa la sección "Mi Contraseña"' 
+        });
+    }
+
+    try {
+        // Verificar que el usuario existe
+        const checkQuery = 'SELECT username FROM users WHERE id = ?';
+        db.query(checkQuery, [parsedUserId], async (err, results) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ success: false, message: 'Error del servidor' });
+            }
+
+            if (results.length === 0) {
+                return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+            }
+
+            const targetUsername = results[0].username;
+
+            // No permitir cambiar contraseña de otro admin (si hay múltiples)
+            if (targetUsername === 'DES') {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: 'No puedes cambiar la contraseña del usuario DES' 
+                });
+            }
+
+            // Hasher nueva contraseña
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Actualizar contraseña
+            const updateQuery = 'UPDATE users SET password = ? WHERE id = ?';
+            db.query(updateQuery, [hashedPassword, parsedUserId], (updateErr, updateResult) => {
+                if (updateErr) {
+                    console.error(updateErr);
+                    return res.status(500).json({ success: false, message: 'Error al actualizar la contraseña' });
+                }
+
+                res.json({ 
+                    success: true, 
+                    message: `Contraseña del usuario "${targetUsername}" cambiada exitosamente` 
+                });
+            });
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Error del servidor' });
+    }
 });
 
 app.listen(PORT, () => {

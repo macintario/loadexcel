@@ -29,10 +29,17 @@ body {
     backdrop-filter: blur(10px);
 }
 
-.login-form h2 {
+.login-form h1 {
     text-align: center;
     margin-bottom: 30px;
-    color: #333;
+    color: #5A1236;
+    font-size: 30px;
+    font-weight: 300;
+}
+.login-form h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #8B1538;
     font-size: 28px;
     font-weight: 300;
 }

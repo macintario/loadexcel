@@ -6,3 +6,4 @@ uploads
 *.log
 *.csv
 *.xlsx 
+.*lock

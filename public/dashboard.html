@@ -36,6 +36,12 @@
                         <h4>Ver Datos Excel</h4>
                         <p>Consulta y administra los datos de Excel que has subido al sistema.</p>
                         <a href="/excelmoodle/view-excel-data" class="feature-link">Ver Datos</a>
+                    </div>
+                    
+                    <div class="feature-card" id="changePasswordCard" style="display: none;">
+                        <h4>Gestionar Contraseñas</h4>
+                        <p>Cambia las contraseñas de los usuarios del sistema.</p>
+                        <a href="/excelmoodle/change-passwords" class="feature-link">Gestionar Contraseñas</a>
                     </div>                    
                     
                 </div>
@@ -55,6 +61,11 @@
                     document.getElementById('userDetails').innerHTML = `
                         ${user.username}<br>
                     `;
+                    
+                    // Mostrar card de cambio de contraseñas solo si es DES
+                    if (user.isAdmin) {
+                        document.getElementById('changePasswordCard').style.display = 'block';
+                    }
                 } else {
                     document.getElementById('userDetails').innerHTML = `
                         <p class="error">Error cargando información del usuario</p>
