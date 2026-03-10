@@ -563,7 +563,7 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
             ,'nms',lpad(@rn,3,'0'),'@gmail.com') as email,
                'NMS26' as course1,
                0 as suspended
-             , 'NMS01' as "group1"
+             , concat('NMS', right(u.username,2)) as "group1"
             FROM excel_data e
             INNER JOIN users u ON u.id = e.user_id
             CROSS JOIN (SELECT @rn := 0) params
@@ -594,7 +594,7 @@ app.get(`${BASE_PATH}/api/excel-data/download-csv`, requireAuth, requireDesAdmin
             ,'nms',lpad(@rn,3,'0'),'@gmail.com') as email,
                'NMS26' as course1,
                0 as suspended
-             , 'NMS01' as "group1"
+             , concat('NMS', right(u.username,2)) as "group1"
             FROM excel_data e
             INNER JOIN users u ON u.id = e.user_id
             CROSS JOIN (SELECT @rn := 0) params
