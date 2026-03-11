@@ -141,6 +141,7 @@ button[type="submit"]:hover {
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 2px solid #eee;
+    color: white;
 }
 
 .header h2 {
