@@ -372,8 +372,9 @@ app.post(`${BASE_PATH}/api/upload-excel`, requireAuth, upload.single('excelFile'
             const apellidoMaterno = normalizeText(row[apellidoMaternoColumn]);
             const grupo = String(row[grupoColumn] || '').trim();
             
-            // Validar que los campos no estén vacíos
-            if (!boleta || !nombre || !apellidoPaterno || !apellidoMaterno || !grupo) {
+            // Validar que los campos requeridos no estén vacíos
+            // Nota: Al menos uno de los apellidos (paterno o materno) debe estar presente
+            if (!boleta || !nombre || (!apellidoPaterno && !apellidoMaterno) || !grupo) {
                 results.push({
                     boleta: boleta || 'N/A',
                     nombre: nombre || 'N/A',
@@ -381,7 +382,7 @@ app.post(`${BASE_PATH}/api/upload-excel`, requireAuth, upload.single('excelFile'
                     apellidoMaterno: apellidoMaterno || 'N/A',
                     grupo: grupo || 'N/A',
                     status: 'error',
-                    message: 'Campos vacíos'
+                    message: !boleta ? 'Boleta vacía' : !nombre ? 'Nombre vacío' : (!apellidoPaterno && !apellidoMaterno) ? 'Se requiere al menos un apellido (paterno o materno)' : !grupo ? 'Grupo vacío' : 'Campos vacíos'
                 });
                 errorCount++;
                 return callback();
