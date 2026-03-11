@@ -520,9 +520,10 @@ app.get(`${BASE_PATH}/api/excel-data`, requireAuth, (req, res) => {
 
 app.get(`${BASE_PATH}/api/admin/users`, requireAuth, requireDesAdmin, (req, res) => {
     const query = `
-        SELECT id, username
-        FROM users
-        WHERE username <> 'DES'
+        SELECT DISTINCT u.id, u.username
+        FROM users u
+        INNER JOIN excel_data e ON e.user_id = u.id
+        WHERE u.username <> 'DES'
         ORDER BY username ASC
     `;
 
